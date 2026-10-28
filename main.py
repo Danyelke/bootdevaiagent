@@ -22,7 +22,10 @@ def main() -> None:
         api_key=api_key,
     )
 
-    messages = [{"role": "user", "content": args.user_prompt},]
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": args.user_prompt},
+    ]
 
     if args.verbose:
         print(f"User prompt: {args.user_prompt}\n")
