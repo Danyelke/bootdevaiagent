@@ -1,6 +1,7 @@
 import os
 import argparse
-import json
+import sys
+from config import MAX_ITERS
 
 from prompts import system_prompt
 from dotenv import load_dotenv
@@ -36,40 +37,48 @@ def main() -> None:
     generate_content(client, messages, args.verbose)
 
 def generate_content(client: OpenAI, messages: list, verbose: bool) -> None:
-    response = client.chat.completions.create(
-        model="openrouter/free",
-        messages=messages,
-        tools=available_functions,
-    )
+    
+    max_iteration = range(MAX_ITERS)
+    
+    for i in max_iteration:
+        print(f"Round {i+1}")
+        response = client.chat.completions.create(
+            model="openrouter/free",
+            messages=messages,
+            tools=available_functions,
+        )
 
-    if not response.usage:
-        raise RuntimeError("API response appears to be malformed")
+        if not response.usage:
+            raise RuntimeError("API response appears to be malformed")
 
-    if verbose:
-        print("Prompt tokens:", response.usage.prompt_tokens)
-        print("Response tokens:", response.usage.completion_tokens)
-    
-    message = response.choices[0].message
-    
-    if not message.tool_calls:
-        print("Response:")
-        print(response.choices[0].message.content)
-        return
-    
-    if message.tool_calls:
-        for tool_call in message.tool_calls:
-            if tool_call.type != "function":
-                continue
-            function_args = json.loads(tool_call.function.arguments or "{}")
-            #print(f"Calling function: {tool_call.function.name}({function_args})")
-            result_message = call_function(tool_call, verbose)
-            
-            if not result_message["content"]:
-                raise Exception("Content is empty")
-            if verbose:
-                print(f"-> {result_message['content']}")
-            return result_message
+        if verbose:
+            print("Prompt tokens:", response.usage.prompt_tokens)
+            print("Response tokens:", response.usage.completion_tokens)
         
+        message = response.choices[0].message
+        messages.append(message)
+        
+        if not message.tool_calls:
+            print("Response:")
+            print(response.choices[0].message.content)
+            break
+        
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                if tool_call.type != "function":
+                    continue
+                result_message = call_function(tool_call, verbose)
+                
+                if not result_message["content"]:
+                    raise RuntimeError(f"Empty function response for {tool_call.function.name}")
+                if verbose:
+                    print(f"-> {result_message['content']}")
+                messages.append(result_message)
+        
+        if i == max(max_iteration):
+            sys.exit(f"Agent has no responsi in given iterations: {max(max_iteration)}")
+            
+    
 
 if __name__ == "__main__":
     main()
