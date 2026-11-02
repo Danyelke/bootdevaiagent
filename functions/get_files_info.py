@@ -1,6 +1,6 @@
 import os
 
-def get_files_info(working_directory: str, directory: str) -> str:
+def get_files_info(working_directory: str, directory: str = ".") -> str:
     try:
         abs_working_dir = os.path.abspath(working_directory)
         abs_target_dir = os.path.normpath(os.path.join(abs_working_dir, directory))
@@ -11,20 +11,19 @@ def get_files_info(working_directory: str, directory: str) -> str:
 
         if not os.path.isdir(abs_target_dir):
                 return f'Error: "{directory}" is not a directory'
-        
-        for l in os.listdir(abs_target_dir):
-
-            full_path = os.path.join(abs_target_dir, l)
-
-            file_size=os.path.getsize(full_path)
-            is_dir=os.path.isdir(full_path)
-
-            result = result + (f" - {l}: file_size={file_size} bytes, is_dir={is_dir}\n")
-
-        return result
+            
+        files_info: list[str] = []
+        for filename in os.listdir(abs_target_dir):
+            filepath = os.path.join(abs_target_dir, filename)
+            is_dir = os.path.isdir(filepath)
+            file_size = os.path.getsize(filepath)
+            files_info.append(
+                f"- {filename}: file_size={file_size} bytes, is_dir={is_dir}"
+            )
+        return "\n".join(files_info)
     
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error: listing files:{e}"
     
 schema_get_files_info = {
     "type": "function",
